@@ -1,10 +1,18 @@
 import maya.cmds as cmds
 import json
 
+# python의 파일 스트림 관련 기능
+# : file을 open하면 반드시 close 해줘야하는데 'with~as~:' 를 사용하면 해당 구문이 끝나면 자동으로 닫히므로 실수 줄일 수 있다. 
+# 경로는 해당 파일을 저장해둔 경로로 설정을해서 열도록한다. 
+# as f : open()한 파일을 f라고 지칭하겠다는 의미
 with open("C:/Users/Michael/PycharmProjects/FacialRetargeting/configs/David_to_Louise_v2.json") as f:
+    #json.load(f)
+    # : json 파일을 dict type으로 읽어들이기
     config = json.load(f)
+    # with 구분 끝났으니 파일은 close 된다. 
 
 # triangulate base mesh
+# config의 key 'maya_base_mesh_name' 에 해당하는 value값을 저장
 cmds.polyTriangulate(config['maya_base_mesh_name'])
 
 # get all blendshapes' meshes
