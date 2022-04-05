@@ -19,13 +19,16 @@ cmds.polyTriangulate(config['maya_base_mesh_name'])
 mesh_list = cmds.ls(config['maya_bs_group'], dag=1, type="mesh")  # get all blenshapes from blenshape group
 
 # triangualte each blendshape mesh
+# blenshape 이름만 따내기 위해서, mesh_list로부터 파이썬 내장 문자열함수를 사용한다 
 for mesh in mesh_list:
     remove_letters = 5  # somehow maya adds "Shape" at the end of the mesh
     if 'ShapeOrig' in mesh:  # ... and sometimes "ShapeOrig"
         remove_letters = 9
-
+    
+    # mesh 'string'에서 뒤에서부터 remove_letters 만큼은 제외하고 
+    # 그 전까지만 포함한 'string'만 가져와 str으로 mesh_name에 저장. 
     mesh_name = str(mesh[:-remove_letters])
-
+    
     # triangulate mesh
     cmds.polyTriangulate(mesh_name)
 
