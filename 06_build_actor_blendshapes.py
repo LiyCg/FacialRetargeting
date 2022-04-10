@@ -24,12 +24,16 @@ from utils.plotting import plot_similarities
 """
 run: python -m blendshape_transfer
 """
+# precision=4 : 출력 소숫점 4자리까지
+# linewidth=200 : line 별로 200 char 씩 출력
+# suppress=True : 참일때, always print floating point numbers using fixed point notation
 np.set_printoptions(precision=4, linewidth=200, suppress=True)
 
 # load and define parameters
 with open("C:/Users/Michael/PycharmProjects/FacialRetargeting/configs/David_to_Louise_v2.json") as f:
     config = json.load(f)
 
+# alpha: 1.0 / beta: 1.0으로 설정 
 alpha = int(config['alpha'])
 beta = int(config['beta'])
 print("[PARAMS] alpha:", alpha)
@@ -43,11 +47,23 @@ load_pre_processed = True
 
 # load data
 mesh_list = np.load(os.path.join(config['python_data_path'], config['maya_bs_mesh_list']+'.npy')).astype(str)
+    # data folder 안에 존재, marker label 별로 vertex id(from vk)가 value값으로 dictionary로 정의되어있다.  
 sk = np.load(os.path.join(config['python_data_path'], config['vertices_pos_name']+'npy'))  # sparse representation of the blendshapes (vk)
 # get Neutral ref index and new cleaned mesh list
+"""
+def remove_neutral_blendshape(mesh_list, neutral_pose_name):
+
+(설명)   mesh_list에서 neutral_pose 메쉬를 찾아서 지운 새로운 mesh_list와 
+        새로운 (int) 인덱스리스트 그리고 지운 neutral mesh의 인덱스 반환 
+"""
 cleaned_mesh_list, bs_index, ref_index = remove_neutral_blendshape(mesh_list, config['neutral_pose'])
 
 # get neutral (reference) blendshape and normalize it
+"""
+def normalize_positions(pos, min_pos=None, max_pos=None, return_min=False, return_max=False):
+
+(설명)   여기서부터 파악해야함 
+"""
 ref_sk, min_sk, max_sk = normalize_positions(np.copy(sk[ref_index]), return_min=True, return_max=True)
 
 # normalize sk
