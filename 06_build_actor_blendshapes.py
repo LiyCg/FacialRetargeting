@@ -5,6 +5,13 @@ import json
 import matplotlib.pyplot as plt
 
 from utils.load_data import load_training_frames
+"""
+def compute_delta(data, ref, norm_thresh=None):
+
+    compute the delta between a vector data and a ref vector
+    norm_thresh allows to remove some outsiders. When markers doesn't exit, Nexus set the value to 0, therefore applying
+    the norm_thresh will set this delta to 0
+"""
 from utils.compute_delta import compute_delta
 from utils.remove_neutral_blendshape import remove_neutral_blendshape
 from utils.normalize_positions import normalize_positions
@@ -75,8 +82,9 @@ ref_sk, min_sk, max_sk = normalize_positions(np.copy(sk[ref_index]), return_min=
 # normalize sk(using the same 'min_pos' and 'max_pos' matrix used to normalize neutral sk
 sk = normalize_positions(sk, min_pos=min_sk, max_pos=max_sk)
 
+# sk를 3차원으로 sk를 mesh로 plot
 if do_plot:
-    # figure를 만들고 
+    # figure를 만들고 편집할 수 있게 만들어주는 함수
     fig = plt.figure()
     ax = fig.add_subplot(1, 1, 1, projection='3d')
     ax.plot_trisurf(ref_sk[:, 0], ref_sk[:, 1], ref_sk[:, 2])
@@ -86,9 +94,13 @@ if do_plot:
     ax.set_zlabel('Z Label')
 
 # compute delta sparse blendshape
+    # this delta sparse blendshape is a displacement field for activating a particular expressions
+    # new facial poses are computed by displacing weighted sum of these delta blendshapes, with weights
+# [:] : first elem to last elem
 delta_sk = compute_delta(sk[bs_index, :, :], ref_sk)
 
 # test if delta_sk has no none-unique entry
+# np.unique(): 중복 제거하고 unique한 값으로만 표현된 np array 생성(column별) 
 test_unique = np.unique(delta_sk, axis=1)
 if np.shape(test_unique)[0] != np.shape(delta_sk)[0]:
     raise ValueError("delta_sk contains non unique entry! Check your index dictionary to build the sparse blendshape "
@@ -101,8 +113,24 @@ if np.shape(test_unique)[0] != np.shape(delta_sk)[0]:
 # load ref pose
 ref_actor_pose = np.load(os.path.join(config['python_data_path'], config['neutral_pose_positions']+'.npy'))
 # align sequence with the head markers
+# range(A,B) : A,  B-1까지 정수를 list로 return 
+# marker 들 중 끝에서 -4, -3, -2  index를 가져옴 -> 이게 head marker인듯(Head1, Head2, Head3)
 head_markers = range(np.shape(ref_actor_pose)[0] - 4, np.shape(ref_actor_pose)[0] - 1)  # use only 3 markers
+"""
+def align_to_head_markers(positions, ref_idx, roll_ref=25):
+    
+    Align the position to 3 markers (ref_idx). The function correct the rotation and position, as to fix the center
+    of the 3 markers to zero and having 0 angles.
+    roll_ref allows to set a desired angle
+    :param pos: positions
+    :param ref_idx: (3,)
+    :param roll_ref: int definying what angle we want the roll to be
+    :return:
+
+"""
+# ref_actor_pose를 template head_markes의 위치로 align시킨다. 
 ref_actor_pose = align_to_head_markers(ref_actor_pose, ref_idx=head_markers)
+
 
 if do_plot:
     fig = plt.figure()
@@ -128,11 +156,13 @@ if do_plot:
     ax.set_ylabel('Y Label')
     ax.set_zlabel('Z Label')
 
+    # it's set to true above
 if load_pre_processed:
     delta_af = np.load("data/training_delta_af_v2.npy")
     tilda_ckf = np.load("data/training_tilda_ckf_v2.npy")
 else:
     # load sequence
+    # max_num_seq : set to None if we want to use all the sequences
     af = load_training_frames(config['mocap_folder'],
                               num_markers=int(config['num_markers']),
                               template_labels=config['template_labels'],
@@ -174,9 +204,12 @@ K, M, n_dim = np.shape(delta_sk)
 F = np.shape(delta_af)[0]
 print("[data] num_blendshapes:", K)
 print("[data] num_markers:", M)
+# b/c we optimize all personalized delta-blendshapes pk, all xyz vertex position values are 'features'
 print("[data] num_features (M*3):", M*n_dim)
 print("[data] num_frames", F)
 print()
+
+####################################### 4/11 understood
 
 # 1) Facial Motion Similarity
 # reorder delta blendshapes
