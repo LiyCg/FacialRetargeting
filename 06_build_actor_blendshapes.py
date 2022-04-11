@@ -47,8 +47,12 @@ load_pre_processed = True
 
 # load data
 mesh_list = np.load(os.path.join(config['python_data_path'], config['maya_bs_mesh_list']+'.npy')).astype(str)
-    # data folder 안에 존재, marker label 별로 vertex id(from vk)가 value값으로 dictionary로 정의되어있다.  
-sk = np.load(os.path.join(config['python_data_path'], config['vertices_pos_name']+'npy'))  # sparse representation of the blendshapes (vk)
+    
+    # data folder 안에 존재, marker label 별로 vertex id(from vk)가 value값으로 dictionary로 정의되어있다.
+    # sparse representation of all blendshapes(vk)
+    # blendshape들은 동일한 mesh structure를 가지므로, sk는 1:1 대응하는 correspondence data만 갖고있다. 
+sk = np.load(os.path.join(config['python_data_path'], config['vertices_pos_name']+'npy'))  
+
 # get Neutral ref index and new cleaned mesh list
 """
 def remove_neutral_blendshape(mesh_list, neutral_pose_name):
@@ -62,14 +66,17 @@ cleaned_mesh_list, bs_index, ref_index = remove_neutral_blendshape(mesh_list, co
 """
 def normalize_positions(pos, min_pos=None, max_pos=None, return_min=False, return_max=False):
 
-(설명)   여기서부터 파악해야함 
+(설명)    주어진 pos 값(x,y,z) 중 min/max 값 찾아서 vertex별 해당값으로 복사하고, 같은 shape의 vector/matrix로 normalize.
+         return_min과 return_max가 True일 경우(모두), normalize할 때 쓴 min/max matrix/vector도 return한다. 
 """
+# np.copy(a): return copy of given array
 ref_sk, min_sk, max_sk = normalize_positions(np.copy(sk[ref_index]), return_min=True, return_max=True)
 
-# normalize sk
+# normalize sk(using the same 'min_pos' and 'max_pos' matrix used to normalize neutral sk
 sk = normalize_positions(sk, min_pos=min_sk, max_pos=max_sk)
 
 if do_plot:
+    # figure를 만들고 
     fig = plt.figure()
     ax = fig.add_subplot(1, 1, 1, projection='3d')
     ax.plot_trisurf(ref_sk[:, 0], ref_sk[:, 1], ref_sk[:, 2])
