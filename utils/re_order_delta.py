@@ -18,9 +18,12 @@ def re_order_delta(data):
         raise ValueError("[RE-ORDER DELTA] Data dimensions is not supported!", len(np.shape(data)))
 
     # get sorted index from bigger to smaller
+    # np.argsort() : Perform an indirect sort along the given axis
+    # It returns an array of indices of the same shape as a that index data along the given axis in sorted order.
     sorted_index = np.flip(np.argsort(d))
 
     # sort data
+    # list 예를 들면, (0,2,1) 를 np.array에 명시하면, 그 index대로 순서가 바뀜..;; 개쩌는 기능이다. 
     return data[sorted_index], sorted_index
 
 
