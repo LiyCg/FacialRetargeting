@@ -163,6 +163,8 @@ if load_pre_processed:
 else:
     # load sequence
     # max_num_seq : set to None if we want to use all the sequences
+    # selected training frames that are semantically equivalent with all the sk..
+    # is this manually selected...?
     af = load_training_frames(config['mocap_folder'],
                               num_markers=int(config['num_markers']),
                               template_labels=config['template_labels'],
@@ -209,25 +211,87 @@ print("[data] num_features (M*3):", M*n_dim)
 print("[data] num_frames", F)
 print()
 
-####################################### 4/11 understood
+####################################### 4/11 done
 
 # 1) Facial Motion Similarity
-# reorder delta blendshapes
-sorted_delta_sk, sorted_index = re_order_delta(delta_sk)
-sorted_mesh_list = np.array(cleaned_mesh_list)[sorted_index]
-print("[Pre-processing] shape sorted_delta_sk", np.shape(sorted_delta_sk))
-print("[Pre-processing] len sorted_mesh_list", len(sorted_mesh_list))
+"""
+similarity of the ranges of motion is best visualized by considering the displacement of delta_af(af-a0)
+over the entire sequence and the delta-bshp(displacement) of the corresponding vertex on the facial rig (delta_sk=sk-s0)
 
+-> 왜 Similarity를 정량화하는가? 
+    similarity를 계산해서 최대한 비슷한 bshp만을 뽑아내어 parallel parameterization해야함. 
+-> 어떻게 정량화하는가?
+    af와 sk 간에 Pearson Correlation을 계산한다. 다만, mean은 neutral pose로 대체하고, 
+    그렇게되면 각각 delta_af 와 delta_sk로 비교적 손쉽게 표현가능하게 된다. 
+
+"""
+# reorder delta blendshapes
+    """
+    re-order delta matrix data according to its norm
+    the re-ordering goes from the bigger to smallest norm difference(default: 2-norm)
+    :param data:
+    :return:
+    """
+sorted_delta_sk, sorted_index = re_order_delta(delta_sk)
+# neutral mesh를 빼고 정리한 af mesh들 list를 norm 별로 sorting한 sk와 동일 순서로 재배열 
+# list 예를 들면, (0,2,1) 를 np.array에 명시하면, 그 index대로 순서가 바뀜..;; 개쩌는 기능이다. 
+sorted_mesh_list = np.array(cleaned_mesh_list)[sorted_index]
+print("[Pre-processing] shape sorted_delta_sk", np.shape(sorted_delta_sk)) # K X M X 3
+print("[Pre-processing] len sorted_mesh_list", len(sorted_mesh_list)) # K-1 (neutral pose빼고)
+
+# load_pre_processed == False 일때, 본격 similarity 계산 시작
 if not load_pre_processed:
-    # measure similarity between character blendshapes and actor's capture performance
+    # measure similarity between character blendshapes(sk) and actor's capture performance(af)
+    """
+    def compute_corr_coef(da, ds):
+   
+        Compute Pearson Correlation Coefficient between a and s
+        This is formula 5 of the paper
+        f:= number of frames
+        k:= number of blendshapes
+        n:= num_features (n_markers*3)
+        :param da: delta-actor training sequence (f, n)
+        :param ds: delta-character sparse blendshapes (k, n)
+        :return: correlation coefficients in delta representation
+    """
+    # why reshape..? 어차피 똑같은 shape으로 변형하는데...?
     ckf = compute_corr_coef(np.reshape(delta_af, (np.shape(delta_af)[0], -1)),
                             np.reshape(sorted_delta_sk, (np.shape(sorted_delta_sk)[0], -1)))
-
+    
+    # heatmap plotting using 'Seaborn' package
     if do_plot:
         plot_similarities(ckf, "Fig. 7: Motion space similarity")
 
-    # contrast enhancement
+    # contrast enhancement - (Similarity value 한층 강화하는 방법) 
+    """
+    How its done : 
+    
+    trust-value를 sk끼리의 correlation으로 구해서 t-value를 구한다.(데이터과학에서 참고) 
+    구한 t-value에 따라 위에서 구한 similarity를 더욱 강화하기 위해, important bshp(sk)들만 골라내는것이다!
+    """
+    """
+    def compute_trust_values(dsk, do_plot=False):
+    
+    Compute trust values following formula 6
+    k:= number of blendshapes
+    n:= num_features (num_markers*3)
+    :param dsk: delta_sk vector (k, n)
+    :param do_plot: decide if we want to plot the between-correlation matrix
+    :return: trust values vector (k,)
+    """    
     tk = compute_trust_values(np.reshape(sorted_delta_sk, (np.shape(sorted_delta_sk)[0], -1)), do_plot=do_plot)
+    """
+    def compute_tilda_corr_coef(ckf, tk, r=15):
+   
+    compute similarity tilda_ckf from equation 8 in the paper
+    original ckf와 modified된 b(ckf) 사이에서 t-val로 선형보간하는 것이다
+    k:= number of blendshapes
+    f:= number of frames
+    :param ckf: correlation matrix from compute_corr_coef (k, f)
+    :param tk: trust values (k,)
+    :param r: steepness
+    :return:
+    """
     tilda_ckf = compute_tilda_corr_coef(ckf, tk)
     print("[Pre-processing] shape ckf", np.shape(ckf))
     print("[Pre-processing] shape tk", np.shape(tk))
@@ -235,18 +299,40 @@ if not load_pre_processed:
     print()
 
     # 2) Key Expression Extraction
+    """
+    def get_key_expressions(sequence, ksize=3, theta=1, do_plot=False):
+    
+    Extract key expressions as in 4.2 Key Expression Extraction
+    
+    1) apply low pass filtering over each row
+    2) sum filtered correlation coefs over column(per frame)
+    3) extract local peaks(frame index) over sumed up vector
+    
+    k:= number of blendshapes
+    f:= number of frames
+    :param sequence: input data (k, f)
+    :param ksize: int parameter to define the size of the 1D Gaussian kernel size
+    :param theta: float parameter to define the Gaussian filter
+    :param do_plot: option to plot the cumulative correlation as in Fig. 8
+    :return: key expressions within sequence
+    """
     key_expressions_idx = get_key_expressions(tilda_ckf, ksize=3, theta=2, do_plot=do_plot)
     F = len(key_expressions_idx)
+    # key_expressions_idx로 해당 af만 추출  
     delta_af = delta_af[key_expressions_idx, :, :]
+    # ckf(correlation coef)도 해당 af들과의 corr 값들만 가져와서 행렬 재추출
     tilda_ckf = tilda_ckf[:, key_expressions_idx]
     print("[Key Expr. Extract.] Keep", F, "frames")
     print("[Key Expr. Extract.] shape key_expressions", np.shape(key_expressions_idx))
     print("[Key Expr. Extract.] shape delta_af", np.shape(delta_af))
     print("[Key Expr. Extract.] shape tilda_ckf", np.shape(tilda_ckf))
     print()
+    # saving as a file
     np.save("data/training_delta_af", delta_af)
     np.save("data/training_tilda_ckf", tilda_ckf)
 
+####################################### 4/12 done
+    
 # 3) Manifold Alignment
 # built soft max vector
 uk = get_soft_mask(sorted_delta_sk)
