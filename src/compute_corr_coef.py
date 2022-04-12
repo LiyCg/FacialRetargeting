@@ -47,6 +47,8 @@ def compute_tilda_corr_coef(ckf, tk, r=15):
     b = np.exp(r*ckf) / (np.exp(r/2) + np.exp(r*ckf))
 
     # compute tilda_ckf
+    # np.diag() : extract diagonal elem as list or outputs an array 
+    # in this case, it outputs an mattrix and does elementwise matrix mult(행렬곱)
     return np.diag((1-tk)) @ ckf + np.diag(tk) @ b
 
 
