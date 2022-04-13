@@ -20,6 +20,8 @@ def low_pass_filter(signal, ksize=3, theta=1):
     filt = np.exp(-x**2/(2*theta**2))/np.sqrt(2*np.pi*theta**2)
 
     # filter signal
+    # mode: 
+    # Mode ‘same’ returns output of length max(M, N). Boundary effects are still visible.
     return np.convolve(signal, filt, mode='same')
 
 
@@ -63,7 +65,9 @@ def get_key_expressions(sequence, ksize=3, theta=1, do_plot=False):
     # sum filtered correlations coefficients over column
     cumul_seq = np.sum(filtered_seq, axis=0)
 
-    # extract local peaks
+    # extract local peaks(scipy 내장함수)
+    # ex [5,3,2,19,17,8,13,-1] 에서 세원소씩 보면서 주변 원소가 모두 보고있는 원소보다 작을 경우, local peak로 index fetch
+    # 이경우, result는 (3,7) 로 나올것. 
     key_expressions, _ = find_peaks(cumul_seq)
 
     if do_plot:
