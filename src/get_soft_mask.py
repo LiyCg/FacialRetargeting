@@ -17,9 +17,14 @@ def get_soft_mask(dskm):
     :return:
     """
     # compute norm
-    norm_dskm = np.linalg.norm(dskm, axis=2)
-    #get max norm
-    max_norm = np.repeat(np.expand_dims(np.amax(norm_dskm, axis=1), axis=1), np.shape(dskm)[1], axis=1)
+    # axis=2 즉, channel, 여기서는 k, m, 3 순이니깐, 
+    # output = k개 만큼의, 각 m별 norm값(scalar)를 m개원소로 갖는 row벡터를, 쌓아놓은 행렬
+    norm_dskm = np.linalg.norm(dskm, axis=2) # k X m 
+    # get max norm
+    # amax() output = row(sk) 별로 max값 찾아서 row vector로 반환 (,k)
+    # expand_dims() output = (k X 1)
+    # repeat() output = k X m
+    max_norm = np.repeat(np.expand_dims(np.amax(norm_dskm, axis=1), axis=1), np.shape(dskm)[1], axis=1) # k X m
     # compute soft max
     return np.reshape(np.repeat(norm_dskm / max_norm, 3), (np.shape(dskm)[0], np.shape(dskm)[1]*np.shape(dskm)[2]))
 
