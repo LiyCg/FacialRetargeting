@@ -334,10 +334,24 @@ if not load_pre_processed:
 ####################################### 4/12 done
     
 # 3) Manifold Alignment
+"""
+
+goal is to fit the personalized bshp delta pk to the delta af
+    : meaning closed-eye bshp(sk) should be fitted to an closed eye expression in actor's sequence,
+    not being influenced by the negatively correlated eye-opening movements. 
+However, without proper consideration of local support of each bshps,, the alignment is distributed
+SO we encode local support with a soft mask vector uk for bshp k(sk). 
+
+uk : entries corresponding to the x/y/z coordi- of marker 'm' of bshp 'k'(sk), are computed as 
+norm of (delta of marker position of sk) divided by largest marker displacement within bshp delta sk.
+
+"""
 # built soft max vector
 uk = get_soft_mask(sorted_delta_sk)
 print("[SoftMax] shape uk", np.shape(uk))
 print()
+
+####################################### 4/13 done ( src/get_soft_mask.py 참고 )
 
 # 4) Geometric Constraint
 # build initial guess blendshape using RBF wrap (in delta space)
