@@ -346,19 +346,46 @@ uk : entries corresponding to the x/y/z coordi- of marker 'm' of bshp 'k'(sk), a
 norm of (delta of marker position of sk) divided by largest marker displacement within bshp delta sk.
 
 """
-# built soft max vector
+# built soft max vector 
+# this vector's shape is (k, mX3) and each 3 position value is 
+# all same three norm, of each markers divided by the max norm among corresponding sk
+    # I guess not applying just norm but by dividing with the max norm of each sk leads to 'soft' masking
 uk = get_soft_mask(sorted_delta_sk)
-print("[SoftMax] shape uk", np.shape(uk))
+print("[SoftMax] shape uk", np.shape(uk)) # (k, m*3)
 print()
 
 ####################################### 4/13 done ( src/get_soft_mask.py 참고 )
 
 # 4) Geometric Constraint
-# build initial guess blendshape using RBF wrap (in delta space)
+# build initial guess blendshape using RBF wrap (in delta space)\
+# purpose: 
+#       preserving local features of an expression
+#       ex) o-shape of the lips for the kiss expression, is the intention of the geometric constraint
+# process: 
+# 		Based on sparse correspondence data btw s0(of the charater rig), and a0(of an actor),
+# 		1) create initial guess gk, for each personalized bshp pk, using RBF wrap(in delta space)
+#		2) first compute RBF thin-plate spline that transforms netural s0 to a0, 
+#			by placing RBF center at every marker of s0 and solving for RBF weights
+# 		3) resulting RBF func is used to convert delta sk to initial guess delta gk of actor bshp
+#
+#	* geometric prior 의 필요성 : personalized bshp인 pk를 만드는데 있어, local shape properties를 보존하기 위해
+#							-> geo- prior란 미리 준비된 high-resolution generic face mesh를 말하는듯하다.  	
+"""
+def get_initial_actor_blendshapes(s0, a0, delta_sk):
+
+Compute the initial guess(gk) actor blendshapes in delta space as explained in 4.4 Geometric Constraint of the paper
+k:= num_of_blendshapes
+m:= num_of_markers
+:param s0: neutral character expression
+:param a0: neutral actor expression
+:param delta_sk: character blendshapes in delta space
+:return: initial guess of actor blendshapes 
+"""
 delta_gk = get_initial_actor_blendshapes(ref_sk, ref_actor_pose, sorted_delta_sk)
 print("[RBF Wrap] shape delta_gk", np.shape(delta_gk))
 print()
 
+# plotting 'delta sk vs. initial actor blendshape gk'
 if do_plot:
     fig = plt.figure()
     ax = fig.add_subplot(1, 1, 1, projection='3d')
@@ -371,6 +398,8 @@ if do_plot:
     ax.set_xlabel('X Label')
     ax.set_ylabel('Y Label')
     ax.set_zlabel('Z Label')
+
+####################################### 4/13 done ( src/RBF_warp.py 참고 )
 
 # ----------------------------------------------------------------------------
 # ----------------------------------------------------------------------------
