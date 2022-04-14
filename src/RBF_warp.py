@@ -12,10 +12,13 @@ def rbf_kernel(k, k_prime):
     :param k_prime: (n x m) vector
     :return: K (n x n) matrix
     """
-    k_norm = np.sum(k ** 2, axis=-1)
-    k_prime_norm = np.sum(k_prime ** 2, axis=-1)
-    K = np.sqrt(np.abs((k_norm[:, None] + k_prime_norm[None, :] - 2 * np.dot(k, k.T))))
-    return K
+    k_norm = np.sum(k ** 2, axis=-1) # (,m)
+    k_prime_norm = np.sum(k_prime ** 2, axis=-1) # (,m)
+    # [:,None] : expand_dims to that 'None' specified axis
+    #   ex) (,4) shaped np.array[:,None] -> (4,1)
+    # (4,1) + (1,4) 는 없는 부분은 각자 row, column을 복사 concat한 뒤에 (4,4) mat 끼리 합한 (4,4) mat을 리턴
+    K = np.sqrt(np.abs((k_norm[:, None] + k_prime_norm[None, :] - 2 * np.dot(k, k.T)))) # mxm matrix
+    return K 
 
 
 def rbf_warp(p, q):
@@ -39,30 +42,34 @@ def rbf_warp(p, q):
     """
 
     # get number of lmks
-    n = np.shape(p)[0]
+    n = np.shape(p)[0] # p = s0 shape: (m,3) so, shape(p)[0]-> m
 
     # declare matrices
-    P = np.ones((n, 4))
-    a_zero = np.zeros((4, 4))
-    Q = q
-    b_zero = np.zeros((4, 3))
+    P = np.ones((n, 4)) # (m,4)
+    a_zero = np.zeros((4, 4)) # (4,4)
+    Q = q # q = a0 shape: (m,3)
+    b_zero = np.zeros((4, 3)) # (4,3)
 
     # build rbf kernel
-    K = rbf_kernel(p, p)
+    K = rbf_kernel(p, p) # (m,m)
 
     # build P
-    P[:, 1:] = p
+    P[:, 1:] = p # (m,1:3)부분에 p를 복사해 넣음 still size of (m,4)
 
     # build final matrices
-    a = np.concatenate((K, P), axis=1)
-    a = np.concatenate((a, np.concatenate((P.T, a_zero), axis=1)), axis=0)
-    b = np.concatenate((Q, b_zero), axis=0)
+    # np.concatenate() default axis is 0
+        # axis=0 : concat by colum direction(col size should be same) ex) (1,3),(4,3) -> (1+4 , 3)
+        # axis=1 : concat by row direction(row size should be same) ex) (4,1),(4,3) -> (4 , 1+3)
+        
+    a = np.concatenate((K, P), axis=1) # (m,m+4) 
+    a = np.concatenate((a, np.concatenate((P.T, a_zero), axis=1)), axis=0) # a와 (4,m+4) concat -> (m+4, m+4)  
+    b = np.concatenate((Q, b_zero), axis=0) # (m+4,3)
 
     # solve for ax = b with x = [W A].T
-    x = np.linalg.solve(a, b)
+    x = np.linalg.solve(a, b) # (m+4,3)
 
-    W = x[:n, :]
-    A = x[n:, :]
+    W = x[:n, :] # 0~m-1까지 헤딩하는 x의 부분이 weight가 되고
+    A = x[n:, :] # m~m+4까지 해당하는 x의 부분이 A가 된다...A는
 
     return W, A
 
@@ -80,13 +87,16 @@ def get_initial_actor_blendshapes(s0, a0, delta_sk):
     :return: initial guess of actor blendshapes
     """
     # compute initial transform of neutral pose
-    W, A = rbf_warp(s0, a0)
+    W, A = rbf_warp(s0, a0) # weight and A
 
     # compute initial guess by transforming each character blendshapes delta_sk
-    delta_gk = np.zeros(np.shape(delta_sk))
+    # for delta_sk, 'sorted_delta_sk' 가 전달되어 들어올 것 
+    delta_gk = np.zeros(np.shape(delta_sk)) 
+    # 즉, sk 갯수만큼 즉, bshp 갯수 k만큼 돌것이다
     for k in range(np.shape(delta_sk)[0]):
         delta_gk[k] = delta_sk[k] + np.multiply(delta_sk[k], W)
-
+    
+    # same size as delta_sk, which is 'sorted_delta_sk' at section 4) in 06~.py file
     return delta_gk
 
 
