@@ -28,9 +28,10 @@ class EAlign:
 
         self.alpha = alpha
         self.beta = beta
+        
         self.K = np.shape(self.delta_sk)[0]
-        self.N = np.shape(self.delta_sk)[1]
-        self.M = np.shape(self.delta_gk)[1]
+        self.N = np.shape(self.delta_sk)[1] # 3M
+        self.M = np.shape(self.delta_gk)[1] # 3M
 
         # declare energy functions
         self.e_match = EMatch(self.tilda_ckf, self.uk, self.delta_af)
