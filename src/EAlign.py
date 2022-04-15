@@ -59,6 +59,7 @@ class EAlign:
 
         :return:
         """
+        
         AMaX, AMaY, AMaZ, bMaX, bMaY, bMaZ = self.e_match.get_dEmatch()
         AMeX, AMeY, AMeZ, bMeX, bMeY, bMeZ = self.e_mesh.get_dEmesh()
         ACEGX, ACEGY, ACEGZ, bCEGX, bCEGY, bCEGZ = self.e_ceg.get_dECEG()
@@ -79,7 +80,7 @@ class EAlign:
         The function solve the system Ax + b for each xyz coordinates and merge the results
         :return: delta_p (n_k*n_n, )
         """
-
+        # refer to 4.6 numerical optimization in paper 
         AX, AY, AZ, bX, bY, bZ = self.get_dEAlign()
         solX = solve(AX, bX)
         solY = solve(AY, bY)
@@ -91,7 +92,7 @@ class EAlign:
 
         return sol
 
-
+# test 해보기 
 if __name__ == '__main__':
     """
     test E_Align Class
