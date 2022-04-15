@@ -189,7 +189,7 @@ else:
         ax.set_ylabel('Y Label')
         ax.set_zlabel('Z Label')
 
-    delta_af = compute_delta(af, ref_actor_pose, norm_thresh=2)
+    delta_af = compute_delta(af, ref_actor_pose, norm_thresh=2) 
 
     print("[data] shape af:", np.shape(af))
 
@@ -321,7 +321,7 @@ if not load_pre_processed:
     # key_expressions_idx로 해당 af만 추출  
     delta_af = delta_af[key_expressions_idx, :, :]
     # ckf(correlation coef)도 해당 af들과의 corr 값들만 가져와서 행렬 재추출
-    tilda_ckf = tilda_ckf[:, key_expressions_idx]
+    tilda_ckf = tilda_ckf[:, key_expressions_idx] 
     print("[Key Expr. Extract.] Keep", F, "frames")
     print("[Key Expr. Extract.] shape key_expressions", np.shape(key_expressions_idx))
     print("[Key Expr. Extract.] shape delta_af", np.shape(delta_af))
@@ -331,7 +331,7 @@ if not load_pre_processed:
     np.save("data/training_delta_af", delta_af)
     np.save("data/training_tilda_ckf", tilda_ckf)
 
-####################################### 4/12 done
+####################################### 4/12 done ( utils/get_key_expressions.py 참고)
     
 # 3) Manifold Alignment
 """
@@ -382,7 +382,7 @@ m:= num_of_markers
 :return: initial guess of actor blendshapes 
 """
 delta_gk = get_initial_actor_blendshapes(ref_sk, ref_actor_pose, sorted_delta_sk)
-print("[RBF Wrap] shape delta_gk", np.shape(delta_gk))
+print("[RBF Wrap] shape delta_gk", np.shape(delta_gk)) 
 print()
 
 # plotting 'delta sk vs. initial actor blendshape gk'
@@ -399,32 +399,52 @@ if do_plot:
     ax.set_ylabel('Y Label')
     ax.set_zlabel('Z Label')
 
-####################################### 4/13 done ( src/RBF_warp.py 참고 )
+####################################### 4/14 done ( src/RBF_warp.py 참고 )
 
 # ----------------------------------------------------------------------------
 # ----------------------------------------------------------------------------
 # ----------------------------------------------------------------------------
 # 5) build personalized actor-specific blendshapes (delta_p)
-# reshape to match required dimensions
-delta_af = np.reshape(delta_af, (F, M*n_dim))
+# reshape to match required dimensions( not blocks convert to matrices )
+delta_af = np.reshape(delta_af, (F, M*n_dim)) # K, M, n_dim = np.shape(delta_sk) / F = len(key_expressions_idx)
 sorted_delta_sk = np.reshape(sorted_delta_sk, (K, M*n_dim))
 # print control of all shapes
-print("[dp] shape tilda_ckf:", np.shape(tilda_ckf))
-print("[dp] shape uk:", np.shape(uk))
+print("[dp] shape tilda_ckf:", np.shape(tilda_ckf)) 
+print("[dp] shape uk:", np.shape(uk)) # (k, m*3)
 print("[dp] shape delta_af:", np.shape(delta_af))
 print("[dp] shape delta_gk:", np.shape(delta_gk))
 print("[dp] shape delta_sk", np.shape(sorted_delta_sk))
 # declare E_Align
+"""
+def __init__(self, tilda_ckf, uk, delta_af, delta_gk, ref_sk, delta_sk, alpha=0.01, beta=0.1):
+
+Construct a class to compute E_Align as in formula 4 using a function to pass directly the personalized blendshapes
+in delta space delta_p (dp)
+k:= num_of_blendshapes
+f:= num_frames
+m:= num_markers
+n:= num_features (n_m * 3)
+"""
+# alpha: 1.0 / beta: 1.0으로 설정 
 e_align = EAlign(tilda_ckf, uk, delta_af, delta_gk, ref_sk, sorted_delta_sk, alpha=alpha, beta=beta)
 # compute personalized actor-specific blendshapes
 start = time.time()
+"""
+def compute_actor_specific_blendshapes(self, vectorized=True):
+ 
+Solve EAlign to compute the personalized actor-specific blendshapes in delta space (delta_p)
+The function solve the system Ax + b for each xyz coordinates and merge the results
+:return: delta_p (n_k*n_n, ) 
+"""
 delta_p = e_align.compute_actor_specific_blendshapes(vectorized=False)
 print("[dp] Solved in:", time.time() - start)
 print("[dp] shape delta_p", np.shape(delta_p))
-print()
+print() 
 # ----------------------------------------------------------------------------
 # ----------------------------------------------------------------------------
 # ----------------------------------------------------------------------------
+
+####################################### 4/15 done ( src/EAlign.py 참고 )
 
 # 6) save delta_p ans sorted_mesh_list
 if save:
