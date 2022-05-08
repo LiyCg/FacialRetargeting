@@ -1,5 +1,5 @@
 import numpy as np
-
+import matplotlib.pyplot as plt
 np.set_printoptions(precision=2, linewidth=200)
 
 
@@ -93,6 +93,7 @@ def get_initial_actor_blendshapes(s0, a0, delta_sk):
     # for delta_sk, 'sorted_delta_sk' 가 전달되어 들어올 것 
     delta_gk = np.zeros(np.shape(delta_sk)) 
     # 즉, sk 갯수만큼 즉, bshp 갯수 k만큼 돌것이다
+    # neutral pose 사이의 weight 만을 갖고 즉, RBF function을 갖고 모든 sk에 적용하는것!
     for k in range(np.shape(delta_sk)[0]):
         delta_gk[k] = delta_sk[k] + np.multiply(delta_sk[k], W)
     
@@ -122,6 +123,7 @@ if __name__ == '__main__':
     W, A = rbf_warp(s0, a0)
     print("shape W, A", np.shape(W), np.shape(A))
     print(W)
+    # A는 뭘까...?
     print(A)
     print()
 
@@ -131,3 +133,17 @@ if __name__ == '__main__':
     delta_sk = np.random.rand(K, m, 3)
     delta_gk = get_initial_actor_blendshapes(s0, a0, delta_sk)
     print("shape gk", np.shape(delta_gk))
+    print("delta_gk", delta_gk)
+
+    #plotting
+    fig = plt.figure()
+    ax = fig.add_subplot(1, 1, 1, projection='3d')
+    bs_idx = 0
+    ax.plot_trisurf(s0[:, 0], s0[:, 1], s0[:, 2], alpha=0.6)
+    g0 = s0 + delta_gk[bs_idx]
+    ax.plot_trisurf(g0[:, 0], g0[:, 1], g0[:, 2], alpha=0.6)
+    ax.set_title("delta sk[{}] vs. initial actor blendshape gk[{}]".format(bs_idx, bs_idx))
+    ax.set_xlabel('X Label')
+    ax.set_ylabel('Y Label')
+    ax.set_zlabel('Z Label')
+    plt.show()

@@ -24,3 +24,5 @@ def compute_delta(data, ref, norm_thresh=None):
             deltas.append(delta)
 
     return np.array(deltas)
+
+

@@ -39,6 +39,7 @@ if __name__ == '__main__':
     end = 7000
 
     delta_p_name = config['dp_name']+'_alpha_'+config['alpha']+'_beta_'+config['beta']+".npy"
+    # - these are all .csd file with different expessions(each of them are sequences of frames)
     # sequence_name = "AngerTrail05.c3d"
     # sequence_name = "HappyTrail01.c3d"
     # sequence_name = "FearTrail03.c3d"
@@ -50,13 +51,14 @@ if __name__ == '__main__':
         save_name = "weights_David2Louise_retarget_"+sequence_name+"_s"+str(start)+"_alpha_"+alpha+"_beta_"+beta+"_mu_"+mu+"_nu_"+nu
         if end is not None:
             save_name = "weights_David2Louise_retarget_"+sequence_name+"_" + str(
-                start) + "_e"+str(end)+"_alpha_" + alpha + "_beta_" + beta + "_mu_" + mu + "_nu_" + nu
+            start) + "_e"+str(end)+"_alpha_" + alpha + "_beta_" + beta + "_mu_" + mu + "_nu_" + nu
     elif end is not None:
         save_name = "weights_David2Louise_retarget_"+sequence_name+"_e" + str(
             end) + "_alpha_" + alpha + "_beta_" + beta + "_mu_" + mu + "_nu_" + nu
     else:
         save_name = "weights_David2Louise_retarget_"+sequence_name+"_alpha_" + alpha + "_beta_" + beta + "_mu_" + mu + "_nu_" + nu
 
+    # load personalized bshp, we saved at 06_build_actor_bshp
     # get actor animation
     # ----------------------- data -------------------------
     # load data
@@ -132,7 +134,9 @@ if __name__ == '__main__':
     #     weights.append(w)
 
     # multiprocessing
+    # partial 함수 : partial은 이처럼 하나 이상의 인수가 이미 채워진 함수의 새 버전을 만드는데 유용하게 사용된다.
     p_get_w = partial(get_w, eRetarget=eRetarget, delta_af=delta_af)
+    # 이 객체는 여러 입력 값에 걸쳐 함수의 실행을 병렬 처리하고 입력 데이터를 프로세스에 분산시키는 편리한 방법을 제공합니다(데이터 병렬 처리).
     weights = pool.map(p_get_w, tqdm(range(len(delta_af))))
     pool.close()
 

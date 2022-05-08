@@ -247,12 +247,18 @@ if __name__ == '__main__':
     for k in range(n_k):
         fit = w[k] * dpk[k]
         fits.append(fit)
+    # np.sum(fits, axis = 0) : (15,1)
+    # => sk 별로 marker 별로 xyz에 각각 같은 weight w[k]가 곱해진 값을 row를 축으로 sum해낸 값, 즉 (1x15) row vector가 출력된다.
+    print(np.sum(fits,axis=0))
+
+    # 위의 값을 frame별 sparse actor representation에서 빼준 값을 fits로 재정의
     fits = af - np.sum(fits, axis=0)
     e_fit_test = np.linalg.norm(fits)**2/n_m
     print("[EFit]e_fit_test", e_fit_test)
 
     e_fit = e_retarg._e_fit(w)
     print("[EFit]e_fit", e_fit)
+    # assert는 올바른 상황을 명시, 그 상황에 어긋날 경우, error 도출
     assert e_fit == e_fit_test
     print("[EFit] Error values are equal")
     print()
@@ -262,7 +268,7 @@ if __name__ == '__main__':
     start = time.time()
     opt = optimize.minimize(e_retarg.get_EFit(), w, method="BFGS")
     print("[EFit]solved in:", time.time() - start)
-    print(opt.x)
+    print(opt.x) # dpk, sk 모두 4개씩이므로 4차원 vector가 출력된다
 
     print("[EFit]try solver")
     A, b = e_retarg.get_dEFit()
@@ -273,10 +279,11 @@ if __name__ == '__main__':
     print(sol)
 
     # test if values matches
-    # np.testing.assert_array_equal(np.around(opt.x, 4), np.round(sol, 4))
-    # print("[EFit] Optimization vs. Solver reaches same values!")
+    np.testing.assert_array_equal(np.around(opt.x, 4), np.round(sol, 4))
+    print("[EFit] Optimization vs. Solver reaches same values!")
     print()
 
+    # this is where this paper differs from other approaches
     # ------------------------------------------------------------------------------
     # ---------------------------      E Prior       -------------------------------
     # ------------------------------------------------------------------------------
@@ -318,12 +325,13 @@ if __name__ == '__main__':
     print(sol)
 
     # test if values matches
-    # np.testing.assert_array_equal(np.around(opt.x, 5), np.round(sol, 5))
-    # print("Reached same value!")
+    np.testing.assert_array_equal(np.around(opt.x, 5), np.round(sol, 5))
+    print("Reached same value!")
 
     # ------------------------------------------------------------------------------
     # ---------------------------      E Retarget    -------------------------------
     # ------------------------------------------------------------------------------
+    # E Retarget = E Fit + E Reg
     print("-------- ERetarget ---------")
 
     print("[ERetarget] try solver")
@@ -336,6 +344,8 @@ if __name__ == '__main__':
 
     print("[ERetarget] test minimize")
     start = time.time()
+    # Minimization of scalar function of one or more variables using the BFGS algorithm.
+    # with initial guess sol
     opt = optimize.minimize(e_retarg.get_eRetarget(), sol, method="BFGS")
     print("[ERetarget] solved in:", time.time() - start)
     print("[ERetarget] shape opt.x", np.shape(opt.x))
@@ -343,6 +353,9 @@ if __name__ == '__main__':
 
     print("[ERetarget] Least Square")
     start = time.time()
+    #  least_squares finds a local minimum of the cost function F(x)
+    # sol : 초깃값, Initial guess on independent variables. If float, it will be treated as a 1-D array with one element.
+    # BFGS 알고리즘 : f(x)를 제한 조건이 없는 실수 벡터 x에 대해서 최소화 시키는 것으로, 여기서 함수 f(x)는 스칼라 함수가 되겠다.
     lsq = optimize.least_squares(e_retarg.get_eRetarget(), sol)
     print("[ERetarget] solved in:", time.time() - start)
     print("[ERetarget] shape lsq", np.shape(lsq.x))

@@ -110,7 +110,8 @@ if np.shape(test_unique)[0] != np.shape(delta_sk)[0]:
 # get Actor Animation
 # ----------------------------------------------------------------------------------------------------------------------
 
-# load ref pose
+# load ref pose of an actor
+# david이 actor이고, louise가 캐릭터 이름인듯하다. 참고하
 ref_actor_pose = np.load(os.path.join(config['python_data_path'], config['neutral_pose_positions']+'.npy'))
 # align sequence with the head markers
 # range(A,B) : A,  B-1까지 정수를 list로 return 
@@ -128,7 +129,7 @@ def align_to_head_markers(positions, ref_idx, roll_ref=25):
     :return:
 
 """
-# ref_actor_pose를 template head_markes의 위치로 align시킨다. 
+# ref_actor_pose를 template head_markers의 위치로 align시킨다.
 ref_actor_pose = align_to_head_markers(ref_actor_pose, ref_idx=head_markers)
 
 
@@ -266,8 +267,13 @@ if not load_pre_processed:
     """
     How its done : 
     
-    trust-value를 sk끼리의 correlation으로 구해서 t-value를 구한다.(데이터과학에서 참고) 
-    구한 t-value에 따라 위에서 구한 similarity를 더욱 강화하기 위해, important bshp(sk)들만 골라내는것이다!
+    trust-value를 sk끼리의 correlation으로 구해서 t-value를 구한다.
+    구한 t-value는 위에서 구한 similarity를 더욱 강화하기 위해 사용된다, important bshp(sk)들만 골라내는것이다! 
+    t값이 작을수록 해당 sk 둘은 correlation이 큰 것이고, 둘 중 하나는 필요가 없다 
+    고로, 
+    t값이 작 애들에대해서는 original ckf쪽으 더 값이 치우치게, 
+    t값이 큰 애들에 대해서는 amplified ckf쪽으로 값이 치우치게 한다. 
+  
     """
     """
     def compute_trust_values(dsk, do_plot=False):
@@ -284,7 +290,7 @@ if not load_pre_processed:
     def compute_tilda_corr_coef(ckf, tk, r=15):
    
     compute similarity tilda_ckf from equation 8 in the paper
-    original ckf와 modified된 b(ckf) 사이에서 t-val로 선형보간하는 것이다
+    original ckf와 modified(amplified)된 b(ckf) 사이에서 t-val로 선형보간하는 것이다
     k:= number of blendshapes
     f:= number of frames
     :param ckf: correlation matrix from compute_corr_coef (k, f)
@@ -350,6 +356,10 @@ norm of (delta of marker position of sk) divided by largest marker displacement 
 # this vector's shape is (k, mX3) and each 3 position value is 
 # all same three norm, of each markers divided by the max norm among corresponding sk
     # I guess not applying just norm but by dividing with the max norm of each sk leads to 'soft' masking
+# 결국, local한 bshp들의 '조합'과 align되는 actor's animation 같은 경우, 두 local bshp들로 alignment가 분산되게 된다는 것!
+# 그렇기 때문에 max_norm을 구하여 각 norm들의 비율을 각 xyz에 곱해준다는 것은
+# 가장 큰 displacement만 남기고 다른 displacement는 작게 만들어버린다는 것이다!
+# max_norm에 해당하는 Marker만 1/1/1 이 그 marker의 xyz에 곱해질것이고 나머지는 전부 1보다 작은 0보다 큰 만큼의 fraction이 곱해지니깐!
 uk = get_soft_mask(sorted_delta_sk)
 print("[SoftMax] shape uk", np.shape(uk)) # (k, m*3)
 print()
@@ -370,6 +380,12 @@ print()
 #
 #	* geometric prior 의 필요성 : personalized bshp인 pk를 만드는데 있어, local shape properties를 보존하기 위해
 #							-> geo- prior란 미리 준비된 high-resolution generic face mesh를 말하는듯하다.  	
+
+# 내가 이해한 내용 -
+# pk에 대응하는 gk 만들기 위해, 각 (extract한) frame별로 RBF function을 적용하는 것이다.
+# s0에서 a0로 변환하는 RBF thin plate spline을 구해서 각 marker 별로 RBF weight를 구하고 그 weight들로 구성된 함수 RBF function을 완성.
+# 그 함수 delta sk 적용하면에 그것이 delta gk인것 를
+
 """
 def get_initial_actor_blendshapes(s0, a0, delta_sk):
 
@@ -405,7 +421,7 @@ if do_plot:
 # ----------------------------------------------------------------------------
 # ----------------------------------------------------------------------------
 # 5) build personalized actor-specific blendshapes (delta_p)
-# reshape to match required dimensions( not blocks convert to matrices )
+# reshape to match required dimensions( not blocks, convert to matrices )
 delta_af = np.reshape(delta_af, (F, M*n_dim)) # K, M, n_dim = np.shape(delta_sk) / F = len(key_expressions_idx)
 sorted_delta_sk = np.reshape(sorted_delta_sk, (K, M*n_dim))
 # print control of all shapes
@@ -414,6 +430,7 @@ print("[dp] shape uk:", np.shape(uk)) # (k, m*3)
 print("[dp] shape delta_af:", np.shape(delta_af))
 print("[dp] shape delta_gk:", np.shape(delta_gk))
 print("[dp] shape delta_sk", np.shape(sorted_delta_sk))
+
 # declare E_Align
 """
 def __init__(self, tilda_ckf, uk, delta_af, delta_gk, ref_sk, delta_sk, alpha=0.01, beta=0.1):
@@ -436,7 +453,10 @@ Solve EAlign to compute the personalized actor-specific blendshapes in delta spa
 The function solve the system Ax + b for each xyz coordinates and merge the results
 :return: delta_p (n_k*n_n, ) 
 """
-delta_p = e_align.compute_actor_specific_blendshapes(vectorized=False)
+###########################################################
+# Here's the pk what i was wondering desperately about!!
+delta_p = e_align.compute_actor_specific_blendshapes(vectorized=False) #personalized bshp pk returned in matrix form(b/c vectorized=False)
+###########################################################
 print("[dp] Solved in:", time.time() - start)
 print("[dp] shape delta_p", np.shape(delta_p))
 print() 
@@ -446,12 +466,12 @@ print()
 
 ####################################### 4/15 done ( src/EAlign.py 참고 )
 
-# 6) save delta_p ans sorted_mesh_list
+# 6) save delta_p and sorted_mesh_list
 if save:
     saving_name = config['dp_name']+'_alpha_'+config['alpha']+'_beta_'+config['beta']
     np.save(os.path.join(config['python_data_path'], saving_name), delta_p)
     np.save(os.path.join(config['python_data_path'], config['sorted_maya_bs_mesh_list']), sorted_mesh_list)
-    print("[save] saved delta_pk (actor specifik blendshapes), shape:", np.shape(delta_p))
+    print("[save] saved delta_pk (actor specific bshps), shape:", np.shape(delta_p))
     print("[save] saved sorted_mesh_list, shape:", np.shape(delta_p))
 
 if do_plot:

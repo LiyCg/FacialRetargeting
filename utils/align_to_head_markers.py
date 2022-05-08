@@ -52,8 +52,12 @@ def align_to_markers(pos, ref_idx, roll_ref):
     # rotate positions
     pos = pos @ R
 
-    # correct space positions
-    mean_pos = np.mean(pos[[ref_idx[0], ref_idx[1]], :], axis=0)
+    # correct space positions(translate to the mean position of three ref markers)
+    # np.mean -> returns the average of the array elements along the specified axis
+    #            get ref_idx[0], ref_idx[1] 's position and get mean vector btw both
+    mean_pos = np.mean(pos[ [ref_idx[0], ref_idx[1]], : ], axis=0)
+
+    # translate every vertices of pos th ref_ids markers
     pos -= mean_pos
     # pos -= pos[ref_idx[0], :]
 

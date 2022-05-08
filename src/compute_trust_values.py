@@ -20,7 +20,7 @@ def compute_trust_values(dsk, do_plot=False):
 
     # compute between-blendshape correlation
     ckl = compute_corr_coef(dsk, dsk)
-    # b/c according to paper, wer'e using positive Pearson Correlation Coef..
+    # b/c according to paper, we're using positive Pearson Correlation Coef..
     ckl = np.maximum(ckl, np.zeros(np.shape(ckl)))
     if do_plot:
         plot_similarities(ckl, "Between blendshapes correlation", vmin=0, vmax=1)

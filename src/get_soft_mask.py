@@ -37,12 +37,17 @@ if __name__ == '__main__':
     """
     np.random.seed(0)
     # declare variables
-    n_k = 4
-    n_m = 2
-    dsk = np.random.rand(n_k, n_m, 3)  # (k, m, xyz)
+    n_k = 4 # bshp 갯수
+    n_m = 2 # marker 갯
+    dsk = np.random.rand(n_k, n_m, 3)  # (k, m, xyz)수
+
+    # visualize dsk
+    for i in range(len(dsk)):
+        print("dsk: ", dsk[i])
 
     # build ukm control using double loops
     ukm_control = np.zeros((n_k, n_m, 3))
+
     for k in range(n_k):
         # compute max norm
         max_norm = 0
@@ -50,14 +55,17 @@ if __name__ == '__main__':
             norm_dskm = np.linalg.norm(dsk[k, m])
             if norm_dskm > max_norm:
                 max_norm = norm_dskm
-
+            print("max_norm", max_norm)
         # compute ukm
         for m in range(n_m):
             norm_dskm = np.linalg.norm(dsk[k, m])
+            # 이런식으로 인위적으로 채워 넣는것! 'max_norm 대비 각 marker들의 norm의 비율' 을 각 marker들의 xyz에 채워넣은 것이 softmask
             ukm_control[k, m, 0] = norm_dskm / max_norm
             ukm_control[k, m, 1] = norm_dskm / max_norm
             ukm_control[k, m, 2] = norm_dskm / max_norm
+
     ukm_control = np.reshape(ukm_control, (n_k, n_m*3))
+
     # test compute_corr_coef with 2 dims array
     ukm = get_soft_mask(dsk)
 
@@ -66,5 +74,7 @@ if __name__ == '__main__':
     print("ukm_control", np.shape(ukm_control))
     print(ukm_control)
 
+    # np.around(): Evenly round to the given number of decimals. 소숫점 아래 n째자리로 반올림
+    # np.all() : Returns True if all elements evaluate to True.
     assert (np.around(ukm, 6).all() == np.around(ukm_control, 6).all())
     print("get_soft_max function works!")

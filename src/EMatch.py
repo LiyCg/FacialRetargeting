@@ -34,7 +34,7 @@ class EMatch:
         # diagonalize uk
         diag_uk = np.array([np.diag(uk) for uk in self.uk])  # using diag(self.uk) would result of getting only the diagonal elements
         # compute weighted mask
-        w_mask = diag_uk @ self.delta_af.T
+        w_mask = np.matmul(diag_uk, self.delta_af.T)
         # duplicate dp
         dup_dp = np.repeat(np.expand_dims(dp, axis=2), self.F, axis=2)
         # compute norm
@@ -56,7 +56,13 @@ class EMatch:
         equation: (2/F) * sum_f(c_{k,f}) * delta_p_k - (2/F) * sum_f[(c_{k,f}) * diag(u_k) * delta_a_f]
 
         It splits the equation in a diagonal matrix A and a vector b as to solve the equation Ax = b, with x = delta_p
-        Since the equation are separable in xyz, the function splits the data and returns a system of equation for each
+
+        Since the equation are separable in xyz,
+
+        the function splits the data
+
+        and returns a system of equation for each!!
+
         dimension, resulting in 3*(kMxknM) instead of one (3kMx3kM) -> section 4.6 of the paper
 
         M:= num_markers = self.N / 3
@@ -74,10 +80,12 @@ class EMatch:
         x_indices = np.arange(start=0, stop=self.N, step=3)
         y_indices = np.arange(start=1, stop=self.N, step=3)
         z_indices = np.arange(start=2, stop=self.N, step=3)
+
         # split self.uk
         ukX = self.uk[:, x_indices]
         ukY = self.uk[:, y_indices]
         ukZ = self.uk[:, z_indices]
+
         # split self.delta_af
         afX = self.delta_af[:, x_indices]
         afY = self.delta_af[:, y_indices]
@@ -94,9 +102,9 @@ class EMatch:
         # there's probably an even better way to make it all in a matrix form :)
         for k in range(self.K):
             # compute the term: tilda_c[k,:] * diag(u[k]) * delta_af[:]
-            bX[k] = (2 / self.F) * self.tilda_ckf[k] @ (np.diag(ukX[k]) @ afX.T).T
-            bY[k] = (2 / self.F) * self.tilda_ckf[k] @ (np.diag(ukY[k]) @ afY.T).T
-            bZ[k] = (2 / self.F) * self.tilda_ckf[k] @ (np.diag(ukZ[k]) @ afZ.T).T
+            bX[k] = (2 / self.F) * np.matmul(np.matmul(self.tilda_ckf[k], (np.diag(ukX[k])) , afX.T).T)
+            bY[k] = (2 / self.F) * np.matmul(np.matmul(self.tilda_ckf[k], (np.diag(ukY[k])) , afY.T).T)
+            bZ[k] = (2 / self.F) * np.matmul(np.matmul(self.tilda_ckf[k], (np.diag(ukZ[k])) , afZ.T).T)
         bX = bX.reshape(-1)
         bY = bY.reshape(-1)
         bZ = bZ.reshape(-1)

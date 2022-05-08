@@ -1,9 +1,9 @@
 import numpy as np
 from scipy.linalg import solve
 
-from src.EMatch import EMatch
-from src.EMesh import EMesh
-from src.ECEG import ECEG
+from EMatch import EMatch
+from EMesh import EMesh
+from ECEG import ECEG
 
 
 class EAlign:
@@ -92,7 +92,6 @@ class EAlign:
 
         return sol
 
-# test 해보기 
 if __name__ == '__main__':
     """
     test E_Align Class
@@ -117,10 +116,11 @@ if __name__ == '__main__':
     delta_af = np.random.rand(n_f, n_n)
     delta_gk = np.random.rand(n_k, n_m, 3)
     delta_sk = np.random.rand(n_k, n_n)
+    ref_sk = np.random.rand(n_m, 3)
     dp = np.random.rand(n_k, n_n)
 
     # declare ERetarget
-    e_align = EAlign(tilda_ckf, uk, delta_af, delta_gk, delta_sk)
+    e_align = EAlign(tilda_ckf, uk, delta_af, delta_gk, ref_sk, delta_sk)
     e_align_fn = e_align.get_EAlign()
 
     print("----- Minimization ------")

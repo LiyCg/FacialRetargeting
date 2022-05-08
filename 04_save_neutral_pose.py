@@ -9,7 +9,7 @@ from utils.load_data import load_c3d_file
 import json
 
 # load and define parameters 
-with open("C:/Users/Michael/PycharmProjects/FacialRetargeting/configs/David_to_Louise_v2.json") as f:
+with open("/Users/liy/Documents/1.projects/LiyCg-github-blog/FacialRetargeting/configs/David_to_Louise_v2.json") as f:
     config = json.load(f)
 
 # load sequence
