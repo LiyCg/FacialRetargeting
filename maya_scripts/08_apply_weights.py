@@ -23,11 +23,12 @@ print("shape ref_w", np.shape(ref_w))
 cmds.select(config['blendshape_node'])
 
 # apply weights for each frame
-for f in range(np.shape(weights)[0]):
+for f in range(np.shape(weights)[0]): # weights: (fxk) matrix (f: # of frames / k: # of bshps)
     print("frame", f)
     bs_idx = 0
     for bs in mesh_list_name:
         if bs != config['neutral_pose']:  # remove neutral pose
+            # w를 btw -10/10 으로 맞추려는 task인듯
             w = max(-10, weights[f, bs_idx])
             w = min(w, 10)
             cmds.setAttr(config['blendshape_node'] + '.' + bs, w)
